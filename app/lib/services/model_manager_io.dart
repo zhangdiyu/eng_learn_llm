@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ModelManager {
   static const String defaultModelName = 'Qwen2.5-1.5B-Instruct-Q4_K_M.gguf';
-  static const String _assetKey = 'assets/models/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf';
+
+  // Android native assets (only in APK, not web)
+  static const String _androidAssetPath = 'models/$defaultModelName';
 
   static const String _prefsModelPath = 'local_model_path';
   static const String _prefsModelReady = 'local_model_ready';
@@ -38,7 +40,8 @@ class ModelManager {
     return false;
   }
 
-  /// Copy model from APK assets to app documents (one-time, ~986MB)
+  /// Extract model from Android native assets (via MethodChannel) to app documents.
+  /// Only works on Android; the model is bundled in android/app/src/main/assets/.
   Future<String> extractModelFromAssets({
     void Function(double progress)? onProgress,
   }) async {
@@ -49,20 +52,23 @@ class ModelManager {
       return path;
     }
 
-    final data = await rootBundle.load(_assetKey);
-    final dir = await getModelDir();
-    final tmpPath = '$dir/_tmp_$defaultModelName';
+    try {
+      final channel = const MethodChannel('com.dailyenglishquest/model');
+      final success = await channel.invokeMethod<bool>('extractModel', {
+        'assetPath': _androidAssetPath,
+        'outputPath': path,
+      });
 
-    final tmpFile = File(tmpPath);
-    await tmpFile.writeAsBytes(
-      data.buffer.asUint8List(),
-      flush: true,
-    );
-    await tmpFile.rename(path);
+      if (success == true && await file.exists()) {
+        if (onProgress != null) onProgress(1.0);
+        await _markReady();
+        return path;
+      }
+    } on MissingPluginException {
+      // MethodChannel not available (not Android)
+    }
 
-    if (onProgress != null) onProgress(1.0);
-    await _markReady();
-    return path;
+    throw StateError('Model not found. Run on Android to extract from APK.');
   }
 
   Future<void> _markReady() async {
