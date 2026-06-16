@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/build_config.dart';
 import '../services/ai_provider.dart';
 import '../services/storage_service.dart';
 import '../services/database_service.dart';
@@ -15,11 +16,13 @@ final databaseServiceProvider = Provider<DatabaseService>((ref) {
   return DatabaseService();
 });
 
-final modelManagerProvider = Provider<ModelManager>((ref) {
+final modelManagerProvider = Provider<ModelManager?>((ref) {
+  if (!BuildConfig.enableLocalLlm) return null;
   return ModelManager();
 });
 
-final localAiProviderProvider = Provider<LocalAiProvider>((ref) {
+final localAiProviderProvider = Provider<LocalAiProvider?>((ref) {
+  if (!BuildConfig.enableLocalLlm) return null;
   return LocalAiProvider();
 });
 

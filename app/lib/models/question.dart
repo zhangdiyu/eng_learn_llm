@@ -4,6 +4,8 @@ class GeneratedQuestion {
   final String topic;
   final String situationZh;
   final String promptZh;
+  final String situationEn;
+  final String promptEn;
   final String speakerRole;
   final String targetIntent;
   final QuestionHints hints;
@@ -14,8 +16,10 @@ class GeneratedQuestion {
     required this.questionId,
     required this.level,
     required this.topic,
-    required this.situationZh,
-    required this.promptZh,
+    this.situationZh = '',
+    this.promptZh = '',
+    this.situationEn = '',
+    this.promptEn = '',
     required this.speakerRole,
     required this.targetIntent,
     required this.hints,
@@ -28,8 +32,10 @@ class GeneratedQuestion {
       questionId: json['questionId'] as String,
       level: json['level'] as String,
       topic: json['topic'] as String,
-      situationZh: json['situationZh'] as String,
-      promptZh: json['promptZh'] as String,
+      situationZh: (json['situationZh'] as String?) ?? '',
+      promptZh: (json['promptZh'] as String?) ?? '',
+      situationEn: (json['situationEn'] as String?) ?? '',
+      promptEn: (json['promptEn'] as String?) ?? '',
       speakerRole: json['speakerRole'] as String,
       targetIntent: json['targetIntent'] as String,
       hints: QuestionHints.fromJson(json['hints'] as Map<String, dynamic>),
@@ -44,6 +50,8 @@ class GeneratedQuestion {
         'topic': topic,
         'situationZh': situationZh,
         'promptZh': promptZh,
+        'situationEn': situationEn,
+        'promptEn': promptEn,
         'speakerRole': speakerRole,
         'targetIntent': targetIntent,
         'hints': hints.toJson(),
@@ -78,16 +86,19 @@ class QuestionRequest {
   final String level;
   final String topic;
   final List<String> recentQuestionIds;
+  final bool translationMode;
 
   const QuestionRequest({
     required this.level,
     required this.topic,
     this.recentQuestionIds = const [],
+    this.translationMode = false,
   });
 
   Map<String, dynamic> toJson() => {
         'level': level,
         'topic': topic,
         'recentQuestionIds': recentQuestionIds,
+        'translationMode': translationMode,
       };
 }

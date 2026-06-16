@@ -18,11 +18,22 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   final _answerController = TextEditingController();
   final _focusNode = FocusNode();
   bool _showHints = false;
+  bool _translationMode = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(gameProvider(null).notifier);
+      notifier.setTranslationMode(_translationMode);
+      notifier.startSession(widget.topic, widget.level);
+    });
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _translationMode = !_translationMode;
+      ref.read(gameProvider(null).notifier).setTranslationMode(_translationMode);
       ref.read(gameProvider(null).notifier).startSession(widget.topic, widget.level);
     });
   }
@@ -88,6 +99,15 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       appBar: AppBar(
         title: Text(_topicLabel()),
         actions: [
+          ActionChip(
+            avatar: Icon(
+              _translationMode ? Icons.translate : Icons.chat,
+              size: 18,
+            ),
+            label: Text(_translationMode ? '翻译' : '对话'),
+            onPressed: _toggleMode,
+          ),
+          const SizedBox(width: 8),
           Row(
             children: List.generate(
               game.heartsRemaining,
@@ -120,7 +140,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => setState(() => _showHints = !_showHints),
                       icon: Icon(_showHints ? Icons.lightbulb : Icons.lightbulb_outline),
-                      label: const Text('提示'),
+                      label: const Text('Hint'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -133,7 +153,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
-                          : const Text('提交'),
+                          : const Text('Submit'),
                     ),
                   ),
                 ],
@@ -141,7 +161,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => ref.read(gameProvider(null).notifier).skipQuestion(),
-                child: const Text('跳过 (-1 ❤️)', style: TextStyle(color: Colors.grey)),
+                child: const Text('Skip (-1 ❤️)', style: TextStyle(color: Colors.grey)),
               ),
               if (game.error != null) ...[
                 const SizedBox(height: 16),
@@ -162,6 +182,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   Widget _buildSituationCard(question, ThemeData theme) {
+    final text = question.situationEn.isNotEmpty
+        ? question.situationEn
+        : question.situationZh;
     return Card(
       color: theme.colorScheme.primaryContainer.withAlpha(60),
       child: Padding(
@@ -172,7 +195,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                question.situationZh,
+                text,
                 style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onPrimaryContainer),
               ),
             ),
@@ -191,13 +214,16 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   Widget _buildPromptCard(question, ThemeData theme) {
+    final text = question.promptEn.isNotEmpty
+        ? question.promptEn
+        : question.promptZh;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             Text(
-              question.promptZh,
+              text,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 height: 1.5,
@@ -206,7 +232,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              '请用英文回答',
+              'Answer in English',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ],
@@ -227,12 +253,12 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               children: [
                 Icon(Icons.lightbulb, color: Colors.amber[700], size: 20),
                 const SizedBox(width: 8),
-                Text('提示', style: theme.textTheme.titleSmall?.copyWith(color: Colors.amber[700])),
+                Text('Hints', style: theme.textTheme.titleSmall?.copyWith(color: Colors.amber[700])),
               ],
             ),
             const SizedBox(height: 12),
             if (question.hints.keywords.isNotEmpty) ...[
-              Text('关键词:', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text('Keywords:', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8,
@@ -248,7 +274,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             ],
             if (question.hints.firstLetters.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('首字母: ${question.hints.firstLetters}',
+              Text('First letters: ${question.hints.firstLetters}',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontFamily: 'monospace',
                     color: theme.colorScheme.onSurfaceVariant,
@@ -268,7 +294,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       textInputAction: TextInputAction.send,
       onSubmitted: (_) => _submitAnswer(),
       decoration: const InputDecoration(
-        hintText: '在这里输入你的英文答案...',
+        hintText: 'Type your answer in English...',
         border: OutlineInputBorder(),
       ),
     );
@@ -283,8 +309,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
 
   String _topicLabel() {
     const labels = {
-      'travel': '旅行英语', 'work': '工作英语', 'socialLife': '社交英语',
-      'shopping': '购物英语', 'dining': '餐饮英语', 'daily': '日常英语',
+      'travel': 'Travel', 'work': 'Work', 'socialLife': 'Social',
+      'shopping': 'Shopping', 'dining': 'Dining', 'daily': 'Daily',
     };
     return labels[widget.topic] ?? widget.topic;
   }

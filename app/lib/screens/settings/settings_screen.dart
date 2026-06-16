@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/build_config.dart';
 import '../../models/learning.dart';
 import '../../providers/preferences_provider.dart';
 import '../../providers/stats_provider.dart';
@@ -118,38 +119,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: () => context.push('/api-setup'),
                 ),
                 const Divider(height: 1),
-                SwitchListTile(
-                  secondary: Icon(Icons.phone_android, color: theme.colorScheme.secondary),
-                  title: const Text('使用本地模型'),
-                  subtitle: Text(_downloading
-                      ? '下载中 ${(_downloadProgress * 100).toStringAsFixed(0)}%'
-                      : localLoaded
-                          ? '模型已就绪 (Qwen2.5-1.5B ~986MB)'
-                          : '首次使用需下载模型 (~986MB)'),
-                  value: useLocal,
-                  onChanged: _downloading
-                      ? null
-                      : (v) async {
-                          if (v && !localLoaded) {
-                            final ok = await _loadLocalModel();
-                            if (!ok) return;
-                          }
-                          ref.read(useLocalModelProvider.notifier).state = v;
-                        },
-                ),
-                if (_downloading) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: LinearProgressIndicator(value: _downloadProgress),
+                if (BuildConfig.enableLocalLlm) ...[
+                  SwitchListTile(
+                    secondary: Icon(Icons.phone_android, color: theme.colorScheme.secondary),
+                    title: const Text('使用本地模型'),
+                    subtitle: Text(_downloading
+                        ? '下载中 ${(_downloadProgress * 100).toStringAsFixed(0)}%'
+                        : localLoaded
+                            ? '模型已就绪 (Qwen2.5-1.5B ~986MB)'
+                            : '首次使用需从安装包解压模型 (~986MB)'),
+                    value: useLocal,
+                    onChanged: _downloading
+                        ? null
+                        : (v) async {
+                            if (v && !localLoaded) {
+                              final ok = await _loadLocalModel();
+                              if (!ok) return;
+                            }
+                            ref.read(useLocalModelProvider.notifier).state = v;
+                          },
                   ),
-                ],
-                if (localLoaded) ...[
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.check_circle, color: Colors.green),
-                    title: const Text('本地模型已加载'),
-                    subtitle: const Text('Qwen2.5-1.5B Q4_K_M (~986MB)'),
-                  ),
+                  if (_downloading) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: LinearProgressIndicator(value: _downloadProgress),
+                    ),
+                  ],
+                  if (localLoaded) ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.check_circle, color: Colors.green),
+                      title: const Text('本地模型已加载'),
+                      subtitle: const Text('Qwen2.5-1.5B Q4_K_M (~986MB)'),
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -221,16 +224,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<bool> _loadLocalModel() async {
+    final modelManager = ref.read(modelManagerProvider);
+    final localProvider = ref.read(localAiProviderProvider);
+    if (modelManager == null || localProvider == null) {
+      return false;
+    }
+
     try {
       setState(() {
         _downloading = true;
         _downloadProgress = 0;
       });
 
-      final modelManager = ref.read(modelManagerProvider);
-      final localProvider = ref.read(localAiProviderProvider);
-
-      final modelPath = await modelManager.downloadModel(
+      final modelPath = await modelManager.extractModelFromAssets(
         onProgress: (progress) {
           setState(() => _downloadProgress = progress);
         },

@@ -44,8 +44,11 @@ class DeepSeekProvider implements AiProvider {
 
   @override
   Future<GeneratedQuestion> generateQuestion(QuestionRequest request) async {
+    final systemPrompt = request.translationMode
+        ? _translationSystemPrompt()
+        : _questionSystemPrompt();
     final messages = [
-      _systemMessage(_questionSystemPrompt()),
+      _systemMessage(systemPrompt),
       _userMessage(jsonEncode(request.toJson())),
     ];
 
@@ -133,17 +136,38 @@ class DeepSeekProvider implements AiProvider {
       };
 
   String _questionSystemPrompt() => '''
-You are an English conversation curriculum designer for Chinese learners.
-Create exactly one practical daily-conversation exercise at the requested level and topic. The learner sees Chinese and must answer in English.
+You are an English conversation curriculum designer.
+Create exactly one practical daily-conversation exercise at the requested level and topic.
+
+The question MUST be presented in English (the situation and prompt the learner reads).
+The learner answers in English.
 
 Requirements:
 - Match vocabulary, grammar, sentence length, and social nuance to the level.
 - Use realistic spoken English, not textbook-only phrasing.
 - Include multiple acceptable reference answers.
-- Avoid ambiguous Chinese prompts unless context resolves the ambiguity.
 - Keep beginner hints useful without revealing the full answer.
 - Return valid JSON matching the provided schema. Return no markdown.
-Return JSON with fields: questionId, level, topic, situationZh, promptZh, speakerRole, targetIntent, hints{keywords[], firstLetters}, referenceAnswers[], focusPoints[]''';
+
+JSON fields: questionId, level, topic, situationEn (English situation description), promptEn (the English question/prompt the learner must respond to), speakerRole, targetIntent, hints{keywords[], firstLetters}, referenceAnswers[], focusPoints[]
+
+IMPORTANT: situationEn and promptEn must be in ENGLISH.''';
+
+  String _translationSystemPrompt() => '''
+You are an English translation exercise generator.
+Create exactly one Chinese-to-English translation exercise at the requested level.
+
+The learner sees a Chinese sentence and must translate it to natural English.
+
+Requirements:
+- Generate a practical, culturally neutral Chinese sentence appropriate for the level.
+- The sentence should be something a Chinese speaker would naturally say in daily life.
+- Provide 2-3 acceptable English translations as reference answers.
+- Return valid JSON matching the provided schema. Return no markdown.
+
+JSON fields: questionId, level, topic, situationZh (Chinese context/situation), promptZh (the Chinese sentence to translate), speakerRole, targetIntent, hints{keywords[], firstLetters}, referenceAnswers[], focusPoints[]
+
+IMPORTANT: promptZh must be the Chinese sentence. referenceAnswers are the English translations.''';
 
   String _evaluationSystemPrompt() => '''
 You are a fair English speaking and writing coach for Chinese learners.

@@ -28,8 +28,8 @@ dependencies:
   flutter_tts: ^4.2.2
   connectivity_plus: ^6.1.1
   json_annotation: ^4.9.0
-  llamadart: ^0.8.1
   http: ^1.2.0
+  llamadart: ^0.8.1
 
 dev_dependencies:
   flutter_test:
@@ -46,3 +46,4 @@ flutter:
   assets:
     - assets/images/
     - assets/data/
+    - assets/models/

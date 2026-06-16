@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/build_config.dart';
 import '../models/question.dart';
 import '../models/evaluation.dart';
 import '../services/ai_provider.dart';
@@ -20,6 +21,7 @@ class GameState {
   final int heartsRemaining;
   final int? lastAttemptId;
   final bool usingLocalModel;
+  final bool isTranslationMode;
 
   const GameState({
     this.currentQuestion,
@@ -33,6 +35,7 @@ class GameState {
     this.heartsRemaining = 5,
     this.lastAttemptId,
     this.usingLocalModel = false,
+    this.isTranslationMode = false,
   });
 
   GameState copyWith({
@@ -47,6 +50,7 @@ class GameState {
     int? heartsRemaining,
     int? lastAttemptId,
     bool? usingLocalModel,
+    bool? isTranslationMode,
     bool clearError = false,
     bool clearEvaluation = false,
   }) {
@@ -65,6 +69,7 @@ class GameState {
       heartsRemaining: heartsRemaining ?? this.heartsRemaining,
       lastAttemptId: lastAttemptId ?? this.lastAttemptId,
       usingLocalModel: usingLocalModel ?? this.usingLocalModel,
+      isTranslationMode: isTranslationMode ?? this.isTranslationMode,
     );
   }
 }
@@ -86,6 +91,10 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   bool get _isLocal => _activeProvider is LocalAiProvider;
+
+  void setTranslationMode(bool enabled) {
+    state = state.copyWith(isTranslationMode: enabled);
+  }
 
   void _loadCachedQuestions() {
     final ids = _storage.getCachedQuestionIds();
@@ -139,8 +148,8 @@ class GameNotifier extends StateNotifier<GameState> {
       state = state.copyWith(
         isLoading: false,
         error: _isLocal
-            ? '本地模型推理失败，请检查模型是否已加载'
-            : '无法生成题目，请检查网络连接和 API 设置',
+            ? 'Failed to load local model. Check settings.'
+            : 'Unable to generate question. Check your network and API key.',
       );
     }
   }
@@ -155,6 +164,9 @@ class GameNotifier extends StateNotifier<GameState> {
       questionJson: jsonEncode(question.toJson()),
       userAnswer: answer,
     );
+
+    // Kick off next question generation IN PARALLEL with evaluation
+    final nextFuture = _prefetchIfNeeded(force: true);
 
     try {
       final evaluation = await _activeProvider.evaluateAnswer(EvaluationRequest(
@@ -173,6 +185,9 @@ class GameNotifier extends StateNotifier<GameState> {
         }
       }
 
+      // Wait for the parallel next-question generation
+      await nextFuture;
+
       state = state.copyWith(
         isSubmitting: false,
         lastEvaluation: evaluation,
@@ -181,9 +196,10 @@ class GameNotifier extends StateNotifier<GameState> {
         sessionQuestionsAnswered: state.sessionQuestionsAnswered + 1,
       );
     } catch (e) {
+      await nextFuture;
       state = state.copyWith(
         isSubmitting: false,
-        error: '评估失败，请重试',
+        error: 'Evaluation failed. Please try again.',
         lastUserAnswer: answer,
         lastAttemptId: attemptId,
       );
@@ -223,7 +239,7 @@ class GameNotifier extends StateNotifier<GameState> {
       } catch (e) {
         state = state.copyWith(
           isLoading: false,
-          error: '无法生成下一题，请重试',
+          error: 'Unable to generate next question.',
         );
       }
     }
@@ -236,8 +252,9 @@ class GameNotifier extends StateNotifier<GameState> {
     await nextQuestion();
   }
 
-  Future<void> _prefetchIfNeeded() async {
-    if (state.prefetchedQuestions.length < 2 && state.currentQuestion != null) {
+  Future<void> _prefetchIfNeeded({bool force = false}) async {
+    final target = force ? 3 : 2;
+    if (state.prefetchedQuestions.length < target && state.currentQuestion != null) {
       try {
         final q = await _activeProvider.generateQuestion(QuestionRequest(
           level: state.currentQuestion!.level,
@@ -263,7 +280,9 @@ class GameNotifier extends StateNotifier<GameState> {
 final gameProvider = StateNotifierProvider.autoDispose
     .family<GameNotifier, GameState, void>((ref, _) {
   final cloudAi = ref.watch(aiProviderProvider);
-  final localAi = ref.watch(localAiProviderProvider);
+  final localAi = BuildConfig.enableLocalLlm
+      ? ref.watch(localAiProviderProvider)
+      : null;
   final storage = ref.watch(storageServiceProvider);
   final db = ref.watch(databaseServiceProvider);
   return GameNotifier(cloudAi, localAi, storage, db);
