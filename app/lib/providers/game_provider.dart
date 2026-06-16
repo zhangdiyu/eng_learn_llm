@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/question.dart';
 import '../models/evaluation.dart';
 import '../services/ai_provider.dart';
+import '../services/local_ai_provider.dart';
 import '../services/storage_service.dart';
 import '../services/database_service.dart';
 import 'auth_provider.dart';
@@ -18,6 +19,7 @@ class GameState {
   final int sessionQuestionsAnswered;
   final int heartsRemaining;
   final int? lastAttemptId;
+  final bool usingLocalModel;
 
   const GameState({
     this.currentQuestion,
@@ -30,6 +32,7 @@ class GameState {
     this.sessionQuestionsAnswered = 0,
     this.heartsRemaining = 5,
     this.lastAttemptId,
+    this.usingLocalModel = false,
   });
 
   GameState copyWith({
@@ -43,6 +46,7 @@ class GameState {
     int? sessionQuestionsAnswered,
     int? heartsRemaining,
     int? lastAttemptId,
+    bool? usingLocalModel,
     bool clearError = false,
     bool clearEvaluation = false,
   }) {
@@ -60,19 +64,28 @@ class GameState {
           sessionQuestionsAnswered ?? this.sessionQuestionsAnswered,
       heartsRemaining: heartsRemaining ?? this.heartsRemaining,
       lastAttemptId: lastAttemptId ?? this.lastAttemptId,
+      usingLocalModel: usingLocalModel ?? this.usingLocalModel,
     );
   }
 }
 
 class GameNotifier extends StateNotifier<GameState> {
-  final AiProvider _ai;
+  final AiProvider _cloudAi;
+  final LocalAiProvider? _localAi;
   final StorageService _storage;
   final DatabaseService _db;
 
-  GameNotifier(this._ai, this._storage, this._db)
+  GameNotifier(this._cloudAi, this._localAi, this._storage, this._db)
       : super(const GameState()) {
     _loadCachedQuestions();
   }
+
+  AiProvider get _activeProvider {
+    if (_localAi != null && _localAi.isLoaded) return _localAi;
+    return _cloudAi;
+  }
+
+  bool get _isLocal => _activeProvider is LocalAiProvider;
 
   void _loadCachedQuestions() {
     final ids = _storage.getCachedQuestionIds();
@@ -95,9 +108,13 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   Future<void> startSession(String topic, String level) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      usingLocalModel: _isLocal,
+    );
     try {
-      final q1 = await _ai.generateQuestion(QuestionRequest(
+      final q1 = await _activeProvider.generateQuestion(QuestionRequest(
         level: level,
         topic: topic,
       ));
@@ -105,7 +122,7 @@ class GameNotifier extends StateNotifier<GameState> {
 
       GeneratedQuestion? q2;
       try {
-        q2 = await _ai.generateQuestion(QuestionRequest(
+        q2 = await _activeProvider.generateQuestion(QuestionRequest(
           level: level,
           topic: topic,
           recentQuestionIds: [q1.questionId],
@@ -121,7 +138,9 @@ class GameNotifier extends StateNotifier<GameState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: '无法生成题目，请检查网络连接和 API 设置',
+        error: _isLocal
+            ? '本地模型推理失败，请检查模型是否已加载'
+            : '无法生成题目，请检查网络连接和 API 设置',
       );
     }
   }
@@ -138,7 +157,7 @@ class GameNotifier extends StateNotifier<GameState> {
     );
 
     try {
-      final evaluation = await _ai.evaluateAnswer(EvaluationRequest(
+      final evaluation = await _activeProvider.evaluateAnswer(EvaluationRequest(
         question: question,
         userAnswer: answer,
       ));
@@ -191,7 +210,7 @@ class GameNotifier extends StateNotifier<GameState> {
       );
       try {
         final question = state.currentQuestion!;
-        final newQ = await _ai.generateQuestion(QuestionRequest(
+        final newQ = await _activeProvider.generateQuestion(QuestionRequest(
           level: question.level,
           topic: question.topic,
           recentQuestionIds: [question.questionId],
@@ -220,7 +239,7 @@ class GameNotifier extends StateNotifier<GameState> {
   Future<void> _prefetchIfNeeded() async {
     if (state.prefetchedQuestions.length < 2 && state.currentQuestion != null) {
       try {
-        final q = await _ai.generateQuestion(QuestionRequest(
+        final q = await _activeProvider.generateQuestion(QuestionRequest(
           level: state.currentQuestion!.level,
           topic: state.currentQuestion!.topic,
         ));
@@ -243,8 +262,9 @@ class GameNotifier extends StateNotifier<GameState> {
 
 final gameProvider = StateNotifierProvider.autoDispose
     .family<GameNotifier, GameState, void>((ref, _) {
-  final ai = ref.watch(aiProviderProvider);
+  final cloudAi = ref.watch(aiProviderProvider);
+  final localAi = ref.watch(localAiProviderProvider);
   final storage = ref.watch(storageServiceProvider);
   final db = ref.watch(databaseServiceProvider);
-  return GameNotifier(ai, storage, db);
+  return GameNotifier(cloudAi, localAi, storage, db);
 });

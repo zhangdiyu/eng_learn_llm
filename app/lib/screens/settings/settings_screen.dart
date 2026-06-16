@@ -6,13 +6,23 @@ import '../../providers/preferences_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/auth_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _downloading = false;
+  double _downloadProgress = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final prefs = ref.watch(preferencesProvider);
     final stats = ref.watch(statsProvider);
+    final useLocal = ref.watch(useLocalModelProvider);
+    final localLoaded = ref.watch(localModelLoadedProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -96,15 +106,65 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _buildSection(theme, 'API 设置'),
+          _buildSection(theme, 'AI 模型'),
           Card(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Icons.vpn_key),
-                  title: const Text('API 密钥'),
+                  title: const Text('DeepSeek API 密钥'),
+                  subtitle: const Text('在线模型，需要网络和 API 余额'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/api-setup'),
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: Icon(Icons.phone_android, color: theme.colorScheme.secondary),
+                  title: const Text('使用本地模型'),
+                  subtitle: Text(_downloading
+                      ? '下载中 ${(_downloadProgress * 100).toStringAsFixed(0)}%'
+                      : localLoaded
+                          ? '模型已就绪 (Qwen2.5-1.5B ~986MB)'
+                          : '首次使用需下载模型 (~986MB)'),
+                  value: useLocal,
+                  onChanged: _downloading
+                      ? null
+                      : (v) async {
+                          if (v && !localLoaded) {
+                            final ok = await _loadLocalModel();
+                            if (!ok) return;
+                          }
+                          ref.read(useLocalModelProvider.notifier).state = v;
+                        },
+                ),
+                if (_downloading) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: LinearProgressIndicator(value: _downloadProgress),
+                  ),
+                ],
+                if (localLoaded) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.check_circle, color: Colors.green),
+                    title: const Text('本地模型已加载'),
+                    subtitle: const Text('Qwen2.5-1.5B Q4_K_M (~986MB)'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildSection(theme, 'ChatTTS 语音'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.record_voice_over),
+                  title: const Text('ChatTTS 服务地址'),
+                  subtitle: const Text('自建 ChatTTS API，用于朗读参考回答'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showChatTTSSettings(context),
                 ),
               ],
             ),
@@ -150,11 +210,68 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            'Daily English Quest v1.0.0',
+            'Daily English Quest v1.1.0',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _loadLocalModel() async {
+    try {
+      setState(() {
+        _downloading = true;
+        _downloadProgress = 0;
+      });
+
+      final modelManager = ref.read(modelManagerProvider);
+      final localProvider = ref.read(localAiProviderProvider);
+
+      final modelPath = await modelManager.downloadModel(
+        onProgress: (progress) {
+          setState(() => _downloadProgress = progress);
+        },
+      );
+
+      await localProvider.loadModel(modelPath);
+      ref.read(localModelLoadedProvider.notifier).state = true;
+      setState(() => _downloading = false);
+      return true;
+    } catch (e) {
+      setState(() => _downloading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('模型加载失败: $e')),
+        );
+      }
+      return false;
+    }
+  }
+
+  void _showChatTTSSettings(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ChatTTS 设置'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ChatTTS 需要自建服务端。'),
+            SizedBox(height: 12),
+            Text('部署方式:'),
+            Text('1. pip install ChatTTS fastapi uvicorn'),
+            Text('2. 启动 API 服务，监听 POST /tts'),
+            Text('3. 在 App 中填入服务地址'),
+            SizedBox(height: 12),
+            Text('示例地址: http://192.168.1.100:8000'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
         ],
       ),
     );
