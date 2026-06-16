@@ -1,0 +1,122 @@
+[
+  {
+    "questionId": "offline-001",
+    "level": "A1",
+    "topic": "daily",
+    "situationZh": "你在早上遇到同事。",
+    "promptZh": "早上好，你今天怎么样？",
+    "speakerRole": "colleague",
+    "targetIntent": "greet a colleague in the morning and ask how they are",
+    "hints": {"keywords": ["morning", "how", "today"], "firstLetters": "G... m... H... a... y... t..."},
+    "referenceAnswers": ["Good morning! How are you today?", "Morning! How's it going today?"],
+    "focusPoints": ["morning greetings", "small talk"]
+  },
+  {
+    "questionId": "offline-002",
+    "level": "A1",
+    "topic": "dining",
+    "situationZh": "你在餐厅点餐。",
+    "promptZh": "我想要一杯水，谢谢。",
+    "speakerRole": "customer",
+    "targetIntent": "politely request a glass of water",
+    "hints": {"keywords": ["would", "water", "please"], "firstLetters": "I w... l... a g... of w..., p..."},
+    "referenceAnswers": ["I'd like a glass of water, please.", "Could I have a glass of water, please?"],
+    "focusPoints": ["polite requests", "I'd like"]
+  },
+  {
+    "questionId": "offline-003",
+    "level": "A1",
+    "topic": "shopping",
+    "situationZh": "你在商店买衣服。",
+    "promptZh": "这件衬衫多少钱？",
+    "speakerRole": "customer",
+    "targetIntent": "ask about the price of an item",
+    "hints": {"keywords": ["how", "much", "shirt", "cost"], "firstLetters": "H... m... i... t... s..."},
+    "referenceAnswers": ["How much is this shirt?", "How much does this shirt cost?"],
+    "focusPoints": ["asking prices", "How much"]
+  },
+  {
+    "questionId": "offline-004",
+    "level": "A1",
+    "topic": "travel",
+    "situationZh": "你在机场问路。",
+    "promptZh": "请问，登机口在哪里？",
+    "speakerRole": "traveler",
+    "targetIntent": "ask for directions to the boarding gate",
+    "hints": {"keywords": ["excuse", "where", "gate"], "firstLetters": "E... me, w... i... t... g..."},
+    "referenceAnswers": ["Excuse me, where is the boarding gate?", "Excuse me, could you tell me where the gate is?"],
+    "focusPoints": ["asking for directions", "Excuse me"]
+  },
+  {
+    "questionId": "offline-005",
+    "level": "A2",
+    "topic": "work",
+    "situationZh": "你和同事讨论会议时间。",
+    "promptZh": "我们明天下午两点开会，可以吗？",
+    "speakerRole": "colleague",
+    "targetIntent": "propose a meeting time and confirm availability",
+    "hints": {"keywords": ["meeting", "tomorrow", "2pm", "work"], "firstLetters": "S... w... m... t... a... 2 p..."},
+    "referenceAnswers": ["Shall we meet tomorrow at 2 PM?", "How about a meeting tomorrow at 2 PM?"],
+    "focusPoints": ["making suggestions", "Shall we"]
+  },
+  {
+    "questionId": "offline-006",
+    "level": "A2",
+    "topic": "socialLife",
+    "situationZh": "你邀请朋友周末一起吃饭。",
+    "promptZh": "这个周末有空吗？我们一起吃个饭吧。",
+    "speakerRole": "friend",
+    "targetIntent": "invite a friend to dinner this weekend",
+    "hints": {"keywords": ["free", "weekend", "dinner", "together"], "firstLetters": "A... y... f... t... w..."},
+    "referenceAnswers": ["Are you free this weekend? Let's have dinner together.", "Do you have time this weekend? We could grab dinner."],
+    "focusPoints": ["making invitations", "Let's"]
+  },
+  {
+    "questionId": "offline-007",
+    "level": "B1",
+    "topic": "work",
+    "situationZh": "你需要向老板请假。",
+    "promptZh": "我下周一需要请假，因为家里有急事。",
+    "speakerRole": "employee",
+    "targetIntent": "request a day off with a reason",
+    "hints": {"keywords": ["take", "day", "off", "family", "emergency"], "firstLetters": "I n... t... t... n... M... o..."},
+    "referenceAnswers": ["I need to take next Monday off due to a family emergency.", "Could I take next Monday off? There's a family emergency I need to handle."],
+    "focusPoints": ["requesting time off", "polite requests at work"]
+  },
+  {
+    "questionId": "offline-008",
+    "level": "B1",
+    "topic": "dining",
+    "situationZh": "你在高级餐厅对服务不满意。",
+    "promptZh": "不好意思，我点的牛排太熟了，能换一份吗？",
+    "speakerRole": "customer",
+    "targetIntent": "politely complain and request a replacement",
+    "hints": {"keywords": ["sorry", "steak", "overcooked", "replace"], "firstLetters": "I'm s..., b... m... s... i..."},
+    "referenceAnswers": ["I'm sorry, but my steak is a bit overcooked. Could I get another one?", "Excuse me, the steak is more well-done than I'd like. Would it be possible to have it remade?"],
+    "focusPoints": ["polite complaints", "could I / would it be possible"]
+  },
+  {
+    "questionId": "offline-009",
+    "level": "B2",
+    "topic": "work",
+    "situationZh": "你不同意同事的方案，但需要委婉表达。",
+    "promptZh": "我觉得这个方案可能有一些风险，我们能不能再考虑一下其他选项？",
+    "speakerRole": "team member",
+    "targetIntent": "politely disagree and suggest alternatives",
+    "hints": {"keywords": ["concerned", "approach", "risks", "alternatives"], "firstLetters": "I s... y... p..., b... I h... s... c..."},
+    "referenceAnswers": ["I see your point, but I have some concerns about the risks. Could we explore other options?", "That's an interesting approach. I'm wondering if we should also consider some alternatives to mitigate the risks."],
+    "focusPoints": ["diplomatic disagreement", "I see your point but"]
+  },
+  {
+    "questionId": "offline-010",
+    "level": "B2",
+    "topic": "socialLife",
+    "situationZh": "你需要婉拒朋友的邀请。",
+    "promptZh": "谢谢你的邀请，但这周实在太忙了，改天好吗？",
+    "speakerRole": "friend",
+    "targetIntent": "politely decline an invitation and suggest another time",
+    "hints": {"keywords": ["thanks", "invitation", "busy", "raincheck"], "firstLetters": "T... f... t... i..., b... I'm s..."},
+    "referenceAnswers": ["Thanks for the invitation, but I'm swamped this week. Can I take a raincheck?", "I really appreciate the invite, but this week is crazy. Let's plan for another time?"],
+    "focusPoints": ["polite refusal", "raincheck / another time"]
+  }
+]
