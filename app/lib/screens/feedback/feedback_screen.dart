@@ -195,42 +195,45 @@ class FeedbackScreen extends StatelessWidget {
           children: [
             Text('问题点', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            ...evaluation.issues.map((issue) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
+            ...evaluation.issues.map((issue) => Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withAlpha(60),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _issueColor(issue.type).withAlpha(20),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(_issueLabel(issue.type),
-                            style: TextStyle(fontSize: 12, color: _issueColor(issue.type))),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            RichText(
-                              text: TextSpan(
-                                style: theme.textTheme.bodyMedium,
-                                children: [
-                                  const TextSpan(text: '你写了 ', style: TextStyle(color: Colors.red)),
-                                  TextSpan(text: '"${issue.original}"', style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.red)),
-                                  const TextSpan(text: ' → '),
-                                  TextSpan(text: '"${issue.suggestion}"', style: const TextStyle(color: Colors.green)),
-                                ],
-                              ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _issueColor(issue.type).withAlpha(20),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                            const SizedBox(height: 4),
-                            Text(issue.reasonZh,
-                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                            child: Text(_issueLabel(issue.type),
+                                style: TextStyle(fontSize: 12, color: _issueColor(issue.type))),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      RichText(
+                        text: TextSpan(
+                          style: theme.textTheme.bodyMedium,
+                          children: [
+                            const TextSpan(text: 'You wrote ', style: TextStyle(color: Colors.red)),
+                            TextSpan(text: '"${issue.original}"', style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.red)),
+                            const TextSpan(text: ' → '),
+                            TextSpan(text: '"${issue.suggestion}"', style: const TextStyle(color: Colors.green)),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(issue.reasonZh,
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 )),
