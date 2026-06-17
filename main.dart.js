@@ -45526,11 +45526,11 @@ var $async$or=A.P(function(b,a0){if(b===1){o.push(a0)
 s=p}for(;;)switch(s){case 0:d=0
 l=t.z,k=t.P,j=n.a,i=t.N,h=t.K
 case 3:p=6
-g=A.ai(["model","deepseek-v4-flash","messages",a,"max_tokens",400,"temperature",0.7],i,h)
+g=A.ai(["model","deepseek-chat","messages",a,"max_tokens",400,"temperature",0.7],i,h)
 f=A.aVi()
 f.a="POST"
 s=9
-return A.K(j.LI(0,"/chat/completions",null,g,null,null,f,null,l),$async$or)
+return A.K(j.LI(0,"/v1/chat/completions",null,g,null,null,f,null,l),$async$or)
 case 9:m=a0
 g=k.a(m.a)
 q=g
