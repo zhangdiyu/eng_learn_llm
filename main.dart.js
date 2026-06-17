@@ -45526,7 +45526,7 @@ var $async$or=A.P(function(b,a0){if(b===1){o.push(a0)
 s=p}for(;;)switch(s){case 0:d=0
 l=t.z,k=t.P,j=n.a,i=t.N,h=t.K
 case 3:p=6
-g=A.ai(["model","deepseek-v4-flash","messages",a,"max_tokens",1000,"temperature",0.7],i,h)
+g=A.ai(["model","deepseek-v4-flash","messages",a,"max_tokens",400,"temperature",0.7],i,h)
 f=A.aVi()
 f.a="POST"
 s=9
@@ -99007,11 +99007,11 @@ B.GW=new A.b4(195e3)
 B.GX=new A.b4(2e4)
 B.X=new A.b4(2e5)
 B.jW=new A.b4(2e6)
+B.oh=new A.b4(2e7)
 B.GY=new A.b4(225e3)
 B.GZ=new A.b4(25e4)
 B.H_=new A.b4(2961926e3)
 B.bw=new A.b4(3e5)
-B.oh=new A.b4(3e7)
 B.oi=new A.b4(35e4)
 B.oj=new A.b4(375e3)
 B.H0=new A.b4(4e4)
