@@ -19,6 +19,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   final _focusNode = FocusNode();
   bool _showHints = false;
   bool _translationMode = false;
+  bool _navigatingToFeedback = false;
 
   @override
   void initState() {
@@ -48,8 +49,27 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   void _submitAnswer() {
     final answer = _answerController.text.trim();
     if (answer.isEmpty) return;
+    _navigatingToFeedback = false;
     ref.read(gameProvider(null).notifier).submitAnswer(answer);
     _answerController.clear();
+  }
+
+  /// Navigate to feedback, then auto-advance on return
+  Future<void> _goToFeedback(GameState game) async {
+    if (_navigatingToFeedback) return;
+    _navigatingToFeedback = true;
+
+    ref.read(statsProvider.notifier).addXp(_calculateXp(game));
+    await context.push('/feedback', extra: {
+      'evaluation': game.lastEvaluation,
+      'userAnswer': game.lastUserAnswer,
+      'question': game.currentQuestion,
+    });
+    _navigatingToFeedback = false;
+
+    if (mounted) {
+      ref.read(gameProvider(null).notifier).nextQuestion();
+    }
   }
 
   @override
@@ -58,13 +78,13 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     final theme = Theme.of(context);
 
     ref.listen<GameState>(gameProvider(null), (prev, next) {
-      if (next.lastEvaluation != null && next.currentQuestion != null) {
-        ref.read(statsProvider.notifier).addXp(_calculateXp(next));
-        context.push('/feedback', extra: {
-          'evaluation': next.lastEvaluation,
-          'userAnswer': next.lastUserAnswer,
-          'question': next.currentQuestion,
-        });
+      // Navigate to feedback when evaluation is done (even if errored)
+      if (!next.isSubmitting &&
+          prev?.isSubmitting == true &&
+          next.lastEvaluation != null &&
+          next.currentQuestion != null &&
+          !_navigatingToFeedback) {
+        _goToFeedback(next);
       }
     });
 

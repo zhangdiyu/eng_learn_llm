@@ -149,7 +149,7 @@ class GameNotifier extends StateNotifier<GameState> {
         isLoading: false,
         error: _isLocal
             ? 'Failed to load local model. Check settings.'
-            : 'Unable to generate question. Check your network and API key.',
+            : 'Unable to generate question: ${e.toString()}',
       );
     }
   }
@@ -159,11 +159,16 @@ class GameNotifier extends StateNotifier<GameState> {
     state = state.copyWith(isSubmitting: true, error: null);
 
     final question = state.currentQuestion!;
-    final attemptId = await _db.saveAttempt(
-      questionId: question.questionId,
-      questionJson: jsonEncode(question.toJson()),
-      userAnswer: answer,
-    );
+
+    // DB save may fail on web (sqflite not supported), ignore gracefully
+    int attemptId = -1;
+    try {
+      attemptId = await _db.saveAttempt(
+        questionId: question.questionId,
+        questionJson: jsonEncode(question.toJson()),
+        userAnswer: answer,
+      );
+    } catch (_) {}
 
     // Kick off next question generation IN PARALLEL with evaluation
     final nextFuture = _prefetchIfNeeded(force: true);
@@ -173,19 +178,20 @@ class GameNotifier extends StateNotifier<GameState> {
         question: question,
         userAnswer: answer,
       ));
-      await _db.updateAttemptEvaluation(attemptId, evaluation);
 
-      if (evaluation.verdict == 'needs_revision' || evaluation.score < 60) {
-        for (final issue in evaluation.issues) {
-          await _db.addToReviewQueue(
-            attemptId: attemptId,
-            questionId: question.questionId,
-            errorType: issue.type,
-          );
+      try {
+        await _db.updateAttemptEvaluation(attemptId, evaluation);
+        if (evaluation.verdict == 'needs_revision' || evaluation.score < 60) {
+          for (final issue in evaluation.issues) {
+            await _db.addToReviewQueue(
+              attemptId: attemptId,
+              questionId: question.questionId,
+              errorType: issue.type,
+            );
+          }
         }
-      }
+      } catch (_) {}
 
-      // Wait for the parallel next-question generation
       await nextFuture;
 
       state = state.copyWith(
@@ -199,9 +205,10 @@ class GameNotifier extends StateNotifier<GameState> {
       await nextFuture;
       state = state.copyWith(
         isSubmitting: false,
-        error: 'Evaluation failed. Please try again.',
+        error: 'Evaluation failed: ${e.toString()}',
         lastUserAnswer: answer,
         lastAttemptId: attemptId,
+        sessionQuestionsAnswered: state.sessionQuestionsAnswered + 1,
       );
     }
   }

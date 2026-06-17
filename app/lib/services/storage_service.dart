@@ -23,21 +23,27 @@ class StorageService {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  // API Key
+  // API Key — dual-store for web compatibility
   Future<void> saveApiKey(String key) async {
     await _secure.write(key: _apiKeyKey, value: key);
+    // Fallback: also save to SharedPreferences (web uses IndexedDB through secure_storage_web)
+    await _prefs?.setString(_apiKeyKey, key);
   }
 
   Future<String?> getApiKey() async {
-    return _secure.read(key: _apiKeyKey);
+    final key = await _secure.read(key: _apiKeyKey);
+    if (key != null && key.isNotEmpty) return key;
+    // Fallback: read from SharedPreferences
+    return _prefs?.getString(_apiKeyKey);
   }
 
   Future<void> deleteApiKey() async {
     await _secure.delete(key: _apiKeyKey);
+    await _prefs?.remove(_apiKeyKey);
   }
 
   Future<bool> hasApiKey() async {
-    final key = await _secure.read(key: _apiKeyKey);
+    final key = await getApiKey();
     return key != null && key.isNotEmpty;
   }
 

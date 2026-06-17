@@ -6,8 +6,8 @@ class AppConfig {
 
   // AI Provider
   static const String aiBaseUrl = 'https://api.deepseek.com';
-  static const String aiEndpoint = '/chat/completions';
-  static const String aiModel = 'deepseek-v4-flash';
+  static const String aiEndpoint = '/v1/chat/completions';
+  static const String aiModel = 'deepseek-chat';
   static const Duration aiTimeout = Duration(seconds: 20);
   static const int aiMaxRetries = 1;
   static const int maxInputTokens = 2000;

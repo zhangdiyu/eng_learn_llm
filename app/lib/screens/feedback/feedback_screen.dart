@@ -19,7 +19,13 @@ class FeedbackScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.extension<AppColors>()!;
+    final colors = theme.extension<AppColors>() ?? const AppColors(
+      success: Color(0xFF22C55E),
+      warning: Color(0xFFF59E0B),
+      primary: Color(0xFF4F46E5),
+      secondary: Color(0xFF14B8A6),
+      error: Color(0xFFEF4444),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('答题反馈')),
