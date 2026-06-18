@@ -32,11 +32,34 @@ eng_learn_llm/
 # 构建 Android App Bundle
 ./build.sh appbundle
 
+# 构建 Web (release，已带 gh-pages 守卫检查)
+./build.sh web
+
 # 清理构建产物
 ./build.sh clean
 ```
 
 构建产物会输出到 `build/` 目录。
+
+## 部署 Web 到 GitHub Pages
+
+⚠️ 仅使用 `./build.sh web` 构建后再部署。脚本会做两道守卫：构建前检查 `lib/main.dart` 是核心 App、`web/` 目录完整；构建后检查产物 `main.dart.js` 包含 `deepseek` 且不含 `Flutter Demo Home Page`。这两个检查正是为了避免再次把 Flutter 默认计数器 Demo 推到线上。
+
+```bash
+# 1. 构建（守卫会拦截错误状态）
+./build.sh web
+
+# 2. 切到 gh-pages 分支并替换内容
+git checkout gh-pages
+rm -rf ./*       # 保留 .git
+cp -R app/build/web/* .
+git add -A && git commit -m "Deploy web" && git push
+
+# 3. 回到 main
+git checkout main
+```
+
+如需自定义 base href（例如部署到根域名）：`BASE_HREF=/ ./build.sh web`
 
 ## 技术栈
 

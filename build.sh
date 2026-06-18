@@ -141,6 +141,82 @@ case "$CMD" in
         fi
         ;;
 
+    web)
+        echo "==> Building web release..."
+        echo ""
+
+        # Sanity-check that the entrypoint is the real app, not a counter demo
+        # left behind by an accidental `flutter create`. This guard prevents
+        # the failure mode that shipped the stock demo to gh-pages.
+        MAIN_DART="$APP_DIR/lib/main.dart"
+        if ! grep -q "DailyEnglishQuestApp" "$MAIN_DART"; then
+            echo "Error: $MAIN_DART does not look like the Daily English Quest app."
+            echo "       Refusing to build — restore the real lib/main.dart first."
+            exit 1
+        fi
+
+        # Web template must be present and tracked. Without it, flutter build
+        # silently regenerates the stock template (counter demo branding).
+        if [ ! -f "$APP_DIR/web/index.html" ] || [ ! -f "$APP_DIR/web/manifest.json" ]; then
+            echo "Error: app/web/ is missing or incomplete."
+            echo "       Restore index.html + manifest.json before building."
+            exit 1
+        fi
+
+        BASE_HREF="${BASE_HREF:-/eng_learn_llm/}"
+
+        echo "==> Cleaning previous build state..."
+        $FLUTTER clean
+
+        echo ""
+        echo "==> Getting dependencies..."
+        $FLUTTER pub get
+
+        echo ""
+        echo "==> Building web (--base-href=$BASE_HREF)..."
+        $FLUTTER build web --release --base-href="$BASE_HREF"
+
+        WEB_OUT="$APP_DIR/build/web"
+        if [ ! -f "$WEB_OUT/main.dart.js" ]; then
+            echo "Error: web build output not found at $WEB_OUT"
+            exit 1
+        fi
+
+        # Post-build guard: confirm the compiled JS contains app-specific
+        # strings, not the counter-demo strings. This is the exact check that
+        # would have caught the bad gh-pages deploy.
+        if ! grep -q "deepseek" "$WEB_OUT/main.dart.js"; then
+            echo "Error: built main.dart.js does not contain 'deepseek'."
+            echo "       The build appears to be the Flutter counter demo, not the real app."
+            echo "       Refusing to publish."
+            exit 1
+        fi
+        if grep -q "Flutter Demo Home Page" "$WEB_OUT/main.dart.js"; then
+            echo "Error: built main.dart.js contains 'Flutter Demo Home Page'."
+            echo "       The counter demo leaked into the build. Refusing to publish."
+            exit 1
+        fi
+
+        # Stage a copy under the repo's top-level build/ for convenience.
+        rm -rf "$BUILD_DIR/web"
+        mkdir -p "$BUILD_DIR"
+        cp -R "$WEB_OUT" "$BUILD_DIR/web"
+
+        echo ""
+        echo "============================================"
+        echo "  Web build successful!"
+        echo "  Output: $WEB_OUT"
+        echo "  Staged: $BUILD_DIR/web"
+        echo ""
+        echo "  To deploy to gh-pages:"
+        echo "    git checkout gh-pages"
+        echo "    rm -rf ./*  # keep .git"
+        echo "    cp -R $WEB_OUT/* ."
+        echo "    git add -A && git commit -m 'Deploy web' && git push"
+        echo "    git checkout main"
+        echo "============================================"
+        ;;
+
     appbundle)
         echo "==> Building release App Bundle..."
         echo ""
@@ -172,11 +248,12 @@ case "$CMD" in
         ;;
 
     *)
-        echo "Usage: $0 [debug|release|appbundle|clean|doctor]"
+        echo "Usage: $0 [debug|release|appbundle|web|clean|doctor]"
         echo ""
         echo "  debug      Build debug APK (default)"
         echo "  release    Build release APK"
         echo "  appbundle  Build release Android App Bundle"
+        echo "  web        Build release web bundle (gh-pages ready)"
         echo "  clean      Remove build artifacts"
         echo "  doctor     Run flutter doctor"
         exit 1
