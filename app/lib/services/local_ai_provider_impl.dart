@@ -84,34 +84,68 @@ class LocalAiProvider implements AiProvider {
   }
 
   Future<Map<String, dynamic>> _generateJson(String prompt) async {
-    final buffer = StringBuffer();
-    await for (final chunk in _session!.create(
+    final contentBuffer = StringBuffer();
+    final thinkingBuffer = StringBuffer();
+
+    // Cap maxTokens so the request fits inside the 2048-token context (a
+    // typical prompt is 300-500 tokens; 1024 leaves comfortable headroom and
+    // avoids llama.cpp short-circuiting when maxTokens > available budget).
+    // enableThinking: false — Qwen2.5-Instruct is not a thinking model, and
+    // leaving the default true causes the chat template to route some
+    // responses into delta.thinking instead of delta.content, leaving the
+    // content buffer empty and the JSON parser staring at "".
+    final stream = _session!.create(
       [LlamaTextContent(prompt)],
-    )) {
+      params: const GenerationParams(maxTokens: 1024, temp: 0.7),
+      enableThinking: false,
+    );
+
+    await for (final chunk in stream) {
+      if (chunk.choices.isEmpty) continue;
       final delta = chunk.choices.first.delta;
-      if (delta.content != null) {
-        buffer.write(delta.content);
-      }
+      if (delta.content != null) contentBuffer.write(delta.content);
+      if (delta.thinking != null) thinkingBuffer.write(delta.thinking);
     }
 
-    var text = buffer.toString().trim();
+    // Prefer content; fall back to thinking if the chat template routed JSON
+    // there (older Qwen GGUFs sometimes do this even with enableThinking off).
+    var raw = contentBuffer.toString().trim();
+    if (raw.isEmpty) raw = thinkingBuffer.toString().trim();
+
+    if (raw.isEmpty) {
+      throw StateError(
+        'Local model returned an empty response. The chat template may be '
+        'misconfigured or the model failed to generate. Check device logs.',
+      );
+    }
+
+    var text = raw;
     if (text.startsWith('```')) {
       final start = text.indexOf('\n');
       final end = text.lastIndexOf('```');
-      if (start != -1 && end != -1) {
+      if (start != -1 && end > start) {
         text = text.substring(start, end).trim();
       }
     }
     final firstBrace = text.indexOf('{');
     final lastBrace = text.lastIndexOf('}');
-    if (firstBrace != -1 && lastBrace != -1) {
+    if (firstBrace != -1 && lastBrace > firstBrace) {
       text = text.substring(firstBrace, lastBrace + 1);
     }
 
-    return _parseJson(text);
+    if (text.isEmpty) {
+      // Defensive: include a snippet of the raw output so the failure is
+      // diagnosable instead of "unexpected end of input at character 1".
+      final preview = raw.length > 200 ? '${raw.substring(0, 200)}...' : raw;
+      throw FormatException(
+        'Local model output contained no JSON object. Got: $preview',
+      );
+    }
+
+    return _parseJson(text, raw);
   }
 
-  Map<String, dynamic> _parseJson(String text) {
+  Map<String, dynamic> _parseJson(String text, String rawForDiagnostics) {
     try {
       return Map<String, dynamic>.from(jsonDecode(text) as Map);
     } catch (_) {}
@@ -126,7 +160,16 @@ class LocalAiProvider implements AiProvider {
 
     repaired = repaired.replaceAll(RegExp(r',(\s*[}\]])'), r'$1');
 
-    return Map<String, dynamic>.from(jsonDecode(repaired) as Map);
+    try {
+      return Map<String, dynamic>.from(jsonDecode(repaired) as Map);
+    } on FormatException catch (e) {
+      final preview = rawForDiagnostics.length > 200
+          ? '${rawForDiagnostics.substring(0, 200)}...'
+          : rawForDiagnostics;
+      throw FormatException(
+        'Failed to parse local model JSON (${e.message}). Raw: $preview',
+      );
+    }
   }
 
   String _combinedSystemPrompt() {

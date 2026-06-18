@@ -40,6 +40,13 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
+    androidResources {
+        // Ship the GGUF model uncompressed so AssetManager can return it
+        // without on-the-fly inflate (faster extraction, smaller mem usage).
+        // .gguf compresses ~2% — it's wasted CPU on every install/extract.
+        noCompress += 'gguf'
+    }
+
     defaultConfig {
         applicationId "com.dailyenglishquest.app"
         minSdk 24
