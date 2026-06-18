@@ -53,6 +53,12 @@ cd "$APP_DIR"
 # Parse command
 CMD="${1:-debug}"
 
+# Compile-time flags. Android targets enable the bundled local LLM
+# (Qwen2.5-1.5B). Web targets must keep it disabled — llamadart cannot
+# run in a browser and the model would never be available.
+ANDROID_DEFINES="--dart-define=ENABLE_LOCAL_LLM=true"
+WEB_DEFINES="--dart-define=ENABLE_LOCAL_LLM=false"
+
 case "$CMD" in
     clean)
         echo "==> Cleaning build artifacts..."
@@ -84,7 +90,7 @@ case "$CMD" in
         # Build APK
         echo ""
         echo "==> Building APK..."
-        $FLUTTER build apk --debug
+        $FLUTTER build apk --debug $ANDROID_DEFINES
 
         # Copy to build output
         mkdir -p "$BUILD_DIR"
@@ -123,7 +129,7 @@ case "$CMD" in
         # Build APK
         echo ""
         echo "==> Building release APK..."
-        $FLUTTER build apk --release
+        $FLUTTER build apk --release $ANDROID_DEFINES
 
         # Copy to build output
         mkdir -p "$BUILD_DIR"
@@ -174,7 +180,7 @@ case "$CMD" in
 
         echo ""
         echo "==> Building web (--base-href=$BASE_HREF)..."
-        $FLUTTER build web --release --base-href="$BASE_HREF"
+        $FLUTTER build web --release --base-href="$BASE_HREF" $WEB_DEFINES
 
         WEB_OUT="$APP_DIR/build/web"
         if [ ! -f "$WEB_OUT/main.dart.js" ]; then
@@ -230,7 +236,7 @@ case "$CMD" in
 
         echo ""
         echo "==> Building App Bundle..."
-        $FLUTTER build appbundle --release
+        $FLUTTER build appbundle --release $ANDROID_DEFINES
 
         mkdir -p "$BUILD_DIR"
         BUNDLE_PATH="$APP_DIR/build/app/outputs/bundle/release/app-release.aab"
