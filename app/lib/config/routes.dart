@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../config/build_config.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/onboarding/api_setup_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -12,8 +13,11 @@ import '../providers/auth_provider.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final hasKeyAsync = ref.watch(hasApiKeyProvider);
   final hasKey = hasKeyAsync.value ?? false;
+  final initialLocation = BuildConfig.requiresApiKey
+      ? (hasKey ? '/' : '/onboarding')
+      : '/';
   return GoRouter(
-    initialLocation: hasKey ? '/' : '/onboarding',
+    initialLocation: initialLocation,
     routes: [
       GoRoute(
         path: '/onboarding',

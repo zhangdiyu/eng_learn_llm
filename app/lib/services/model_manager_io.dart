@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ModelManager {
   static const String defaultModelName = 'Qwen2.5-1.5B-Instruct-Q4_K_M.gguf';
 
-  // Android native assets (only in APK, not web)
-  static const String _androidAssetPath = 'models/$defaultModelName';
+  // Accessed through AssetManager on Android.
+  static const String _androidAssetPath =
+      'flutter_assets/assets/models/$defaultModelName';
 
   static const String _prefsModelPath = 'local_model_path';
   static const String _prefsModelReady = 'local_model_ready';
@@ -40,14 +42,20 @@ class ModelManager {
     return false;
   }
 
-  /// Extract model from Android native assets (via MethodChannel) to app documents.
-  /// Only works on Android; the model is bundled in android/app/src/main/assets/.
+  /// Extract model from bundled assets into app documents.
+  /// Android uses a MethodChannel; Windows copies from bundled Flutter assets.
   Future<String> extractModelFromAssets({
     void Function(double progress)? onProgress,
   }) async {
     final path = await getModelPath();
     final file = File(path);
     if (await file.exists()) {
+      await _markReady();
+      return path;
+    }
+
+    if (Platform.isWindows) {
+      await _copyWindowsBundledModel(file, onProgress: onProgress);
       await _markReady();
       return path;
     }
@@ -65,10 +73,65 @@ class ModelManager {
         return path;
       }
     } on MissingPluginException {
-      // MethodChannel not available (not Android)
+      // MethodChannel not available (for example desktop debug).
     }
 
-    throw StateError('Model not found. Run on Android to extract from APK.');
+    await _extractViaRootBundle(file, onProgress: onProgress);
+    await _markReady();
+    return path;
+  }
+
+  Future<void> _copyWindowsBundledModel(
+    File outputFile, {
+    void Function(double progress)? onProgress,
+  }) async {
+    final exeDir = File(Platform.resolvedExecutable).parent;
+    final candidates = <File>[
+      File(p.join(exeDir.path, 'data', 'flutter_assets', 'assets', 'models',
+          defaultModelName)),
+      File(p.join(Directory.current.path, 'data', 'flutter_assets', 'assets',
+          'models', defaultModelName)),
+    ];
+
+    File? bundled;
+    for (final candidate in candidates) {
+      if (candidate.existsSync()) {
+        bundled = candidate;
+        break;
+      }
+    }
+
+    if (bundled == null) {
+      await _extractViaRootBundle(outputFile, onProgress: onProgress);
+      return;
+    }
+
+    await outputFile.parent.create(recursive: true);
+    final total = await bundled.length();
+    var written = 0;
+    final sink = outputFile.openWrite();
+
+    await for (final chunk in bundled.openRead()) {
+      sink.add(chunk);
+      written += chunk.length;
+      onProgress?.call(total == 0 ? 0 : written / total);
+    }
+
+    await sink.close();
+    onProgress?.call(1.0);
+  }
+
+  Future<void> _extractViaRootBundle(
+    File outputFile, {
+    void Function(double progress)? onProgress,
+  }) async {
+    final data = await rootBundle.load('assets/models/$defaultModelName');
+    await outputFile.parent.create(recursive: true);
+    await outputFile.writeAsBytes(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      flush: true,
+    );
+    onProgress?.call(1.0);
   }
 
   Future<void> _markReady() async {

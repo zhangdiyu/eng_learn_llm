@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/learning.dart';
+import '../../providers/opening_provider.dart';
 import '../../providers/preferences_provider.dart';
 import '../../providers/stats_provider.dart';
+import '../../widgets/opening_card_banner.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -30,6 +32,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(statsProvider);
     final prefs = ref.watch(preferencesProvider);
+    final openingCardAsync = ref.watch(openingCardProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -47,6 +50,26 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            openingCardAsync.when(
+              data: (card) {
+                if (card == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: OpeningCardBanner(
+                    card: card,
+                    onPressed: () {
+                      if (card.actionExtra != null) {
+                        context.push(card.actionRoute, extra: card.actionExtra);
+                      } else {
+                        context.push(card.actionRoute);
+                      }
+                    },
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
             _buildStatsCard(stats, prefs, theme),
             const SizedBox(height: 24),
             _buildContinueButton(context, prefs),

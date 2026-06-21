@@ -46,3 +46,10 @@ flutter:
   assets:
     - assets/images/
     - assets/data/
+    - assets/models/
+
+hooks:
+  user_defines:
+    llamadart:
+      # This app ships a GGUF local model, so only bundle the llama.cpp runtime.
+      llamadart_native_runtimes: [llama_cpp]

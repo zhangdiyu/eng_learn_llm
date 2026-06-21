@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/learning.dart';
+import '../models/opening_experience.dart';
 
 class StorageService {
   final FlutterSecureStorage _secure = const FlutterSecureStorage();
@@ -18,6 +21,7 @@ class StorageService {
   static const _prefsAnswered = 'questions_answered';
   static const _prefsTodayCount = 'today_count';
   static const _prefsLastDate = 'last_active_date';
+  static const _openingHistoryKey = 'opening_history';
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -127,5 +131,28 @@ class StorageService {
 
   String? getCachedEvaluation(int attemptId) {
     return _prefs?.getString('eval_$attemptId');
+  }
+
+  List<Map<String, dynamic>> getOpeningHistory() {
+    final raw = _prefs?.getString(_openingHistoryKey);
+    if (raw == null || raw.isEmpty) {
+      return [];
+    }
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  Future<void> recordOpeningExposure(OpeningCardData card) async {
+    final history = getOpeningHistory();
+    history.insert(0, {
+      ...card.toJson(),
+      'shownAt': DateTime.now().toIso8601String(),
+    });
+    await _prefs?.setString(
+      _openingHistoryKey,
+      jsonEncode(history.take(20).toList()),
+    );
   }
 }

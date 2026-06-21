@@ -41,4 +41,34 @@ final hasApiKeyProvider = FutureProvider<bool>((ref) async {
 });
 
 /// Returns true if we should use local model (no API key, but local model available)
-final useLocalModelProvider = StateProvider<bool>((ref) => false);
+final useLocalModelProvider =
+    StateProvider<bool>((ref) => BuildConfig.preferLocalLlm);
+
+final appBootstrapProvider = FutureProvider<void>((ref) async {
+  final storage = ref.read(storageServiceProvider);
+  await storage.init();
+
+  if (!BuildConfig.preferLocalLlm) {
+    ref.read(useLocalModelProvider.notifier).state = false;
+    ref.read(localModelLoadedProvider.notifier).state = false;
+    return;
+  }
+
+  final modelManager = ref.read(modelManagerProvider);
+  final localAi = ref.read(localAiProviderProvider);
+  if (modelManager == null || localAi == null) {
+    ref.read(useLocalModelProvider.notifier).state = false;
+    ref.read(localModelLoadedProvider.notifier).state = false;
+    return;
+  }
+
+  try {
+    final path = await modelManager.extractModelFromAssets();
+    await localAi.loadModel(path);
+    ref.read(localModelLoadedProvider.notifier).state = true;
+    ref.read(useLocalModelProvider.notifier).state = true;
+  } catch (_) {
+    ref.read(localModelLoadedProvider.notifier).state = false;
+    ref.read(useLocalModelProvider.notifier).state = false;
+  }
+});

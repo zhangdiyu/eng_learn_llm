@@ -79,14 +79,23 @@ class GameNotifier extends StateNotifier<GameState> {
   final LocalAiProvider? _localAi;
   final StorageService _storage;
   final DatabaseService _db;
+  final bool _useLocalModel;
 
-  GameNotifier(this._cloudAi, this._localAi, this._storage, this._db)
-      : super(const GameState()) {
+  GameNotifier(
+    this._cloudAi,
+    this._localAi,
+    this._storage,
+    this._db, {
+    required bool useLocalModel,
+  }) : _useLocalModel = useLocalModel,
+       super(const GameState()) {
     _loadCachedQuestions();
   }
 
   AiProvider get _activeProvider {
-    if (_localAi != null && _localAi.isLoaded) return _localAi;
+    if (_useLocalModel && _localAi != null && _localAi.isLoaded) {
+      return _localAi;
+    }
     return _cloudAi;
   }
 
@@ -290,7 +299,16 @@ final gameProvider = StateNotifierProvider.autoDispose
   final localAi = BuildConfig.enableLocalLlm
       ? ref.watch(localAiProviderProvider)
       : null;
+  final useLocal = BuildConfig.enableLocalLlm
+      ? ref.watch(useLocalModelProvider)
+      : false;
   final storage = ref.watch(storageServiceProvider);
   final db = ref.watch(databaseServiceProvider);
-  return GameNotifier(cloudAi, localAi, storage, db);
+  return GameNotifier(
+    cloudAi,
+    localAi,
+    storage,
+    db,
+    useLocalModel: useLocal,
+  );
 });

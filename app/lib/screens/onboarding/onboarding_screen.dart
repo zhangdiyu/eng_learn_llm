@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/build_config.dart';
 import '../../models/learning.dart';
 import '../../providers/preferences_provider.dart';
 
@@ -139,6 +140,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildReadyPage(ThemeData theme) {
+    final message = BuildConfig.requiresApiKey
+        ? '接下来设置你的 AI 接口密钥，\n就可以开始学习了'
+        : '本地模型将在设备上默认启用，\n你现在就可以开始学习了';
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -149,7 +153,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Text('准备就绪！', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           Text(
-            '接下来设置你的 AI 接口密钥，\n就可以开始学习了',
+            message,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
@@ -185,8 +189,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   child: const Text('下一步'),
                 )
               : FilledButton(
-                  onPressed: () => context.go('/api-setup'),
-                  child: const Text('设置 API'),
+                  onPressed: () =>
+                      context.go(BuildConfig.requiresApiKey ? '/api-setup' : '/'),
+                  child: Text(BuildConfig.requiresApiKey ? '设置 API' : '开始学习'),
                 ),
         ],
       ),

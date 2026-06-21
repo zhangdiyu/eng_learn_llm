@@ -1,0 +1,49 @@
+{
+  "events": [
+    {
+      "event_name": "opening_session_started",
+      "required_fields": ["user_id", "session_id", "event_time"],
+      "optional_fields": ["app_version", "timezone", "local_hour", "days_since_last_open"]
+    },
+    {
+      "event_name": "opening_card_selected",
+      "required_fields": ["user_id", "session_id", "card_id", "card_type", "event_time"],
+      "optional_fields": ["category", "selection_reason", "selection_score", "top_candidates_json"]
+    },
+    {
+      "event_name": "opening_card_shown",
+      "required_fields": ["user_id", "session_id", "card_id", "card_type", "event_time"],
+      "optional_fields": ["category", "surface"]
+    },
+    {
+      "event_name": "opening_card_answered",
+      "required_fields": ["user_id", "session_id", "card_id", "card_type", "event_time"],
+      "optional_fields": ["category", "answer_type", "answer_length", "answer_json"]
+    },
+    {
+      "event_name": "opening_card_dismissed",
+      "required_fields": ["user_id", "session_id", "card_id", "card_type", "event_time"],
+      "optional_fields": ["category", "dismiss_reason"]
+    },
+    {
+      "event_name": "opening_card_skipped",
+      "required_fields": ["user_id", "session_id", "card_id", "card_type", "event_time"],
+      "optional_fields": ["category", "skip_reason"]
+    },
+    {
+      "event_name": "opening_card_cta_clicked",
+      "required_fields": ["user_id", "session_id", "card_id", "card_type", "event_time"],
+      "optional_fields": ["category", "cta_label"]
+    },
+    {
+      "event_name": "opening_followup_rendered",
+      "required_fields": ["user_id", "session_id", "card_id", "event_time"],
+      "optional_fields": ["followup_id", "followup_type"]
+    },
+    {
+      "event_name": "opening_session_completed",
+      "required_fields": ["user_id", "session_id", "event_time"],
+      "optional_fields": ["result", "duration_ms"]
+    }
+  ]
+}
